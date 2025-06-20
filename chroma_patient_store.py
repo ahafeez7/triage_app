@@ -4,9 +4,10 @@ import chromadb
 from datetime import datetime
 from sentence_transformers import SentenceTransformer
 
+
 # Initialize ChromaDB Persistent Client
-client = chromadb.PersistentClient(path="./chroma_store")
-collection = client.get_or_create_collection(name="patients")
+client = chromadb.Client()		# In-memory client (v0.3.23 only supports this)
+collection = client.get_or_create_collection(name="patients")     #this will use in-memory storge, resets when app restarts
 
 # Load embedding model
 model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -73,10 +74,15 @@ def query_similar_cases(vitals, symptoms, history, top_k=3, age_group_filter=Non
     # Metadata-based filter (e.g., age_group = 'senior')
     where_filter = {"age_group": age_group_filter} if age_group_filter else {}
 
+    # Get the number of available elements in the index
+    num_items = collection.count()
+    top_k = min(3, num_items)  # Adjust to whatever default you normally request
+
     results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-        where=where_filter
+    	query_embeddings=[query_embedding],
+    	n_results=top_k,
+    	where=where_filter
     )
+
 
     return results["documents"][0] if results["documents"] else []
